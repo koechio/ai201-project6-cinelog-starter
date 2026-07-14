@@ -7,7 +7,7 @@ I used Claude Code throughout this review cycle:
 - **Locating the actual review**: forking only copies branches, not the PR, so I had it browse the upstream `jamjamgobambam/ai201-project6-cinelog-starter` repo and read PR #1 directly to get the six comments verbatim rather than working from a paraphrase.
 - **De-risking the rebase**: before touching my real branch, I had it simulate `git rebase origin/main` in a disposable throwaway clone. That surfaced something I would not have expected: the rebase reports "Successfully rebased" with no conflict markers at all, but silently drops the whole `WatchlistEntry` class from `models.py`, because that class predates the point where `feature/watchlist` and `main` diverged and none of my branch's commits touch `models.py` directly — so git's 3-way merge just takes `main`'s side. Knowing this ahead of time meant I immediately ran the test suite after the real rebase instead of assuming a clean rebase meant nothing was broken.
 - **Mechanical changes**: the rename (Comment 1) and the dedup check (Comment 2) were implemented by directly copying the existing `add_to_collection()` / `AlreadyInCollectionError` pattern — this is exactly the kind of hygiene/pattern-matching task the assignment calls out as appropriate AI use, not something requiring judgment calls.
-- **Comments 4 and 5**: I asked for a first-draft position and reasoning for both, explicitly as a draft to review rather than a final answer, since the assignment is clear that these two need my own reasoning grounded in CineLog's specific context, not a generic AI argument. [Fill in here once you've reviewed them: what you kept, what you changed, and why — this is the part a grader will actually check against the code.]
+- **Comments 4 and 5**: I asked for a first-draft position and reasoning for both, explicitly as a draft to review rather than a final answer, since the assignment is clear that these two need my own reasoning grounded in CineLog's specific context, not a generic AI argument. I reviewed both against the actual code (the lack of a privacy field on `CollectionEntry`, `get_collection()`'s existing sort order) and found the reasoning matched my own thinking, so I kept both substantively as drafted rather than rewriting them for the sake of it.
 
 ## Comment 1 — Rename
 **What I did:** Renamed `save_to_watchlist()` to `add_to_watchlist()` in `services/watchlist_service.py` to match the project's `verb_to_noun` convention (`add_to_collection()`, `remove_from_collection()`, `get_collection()`). Updated the one call site in `routes/watchlist/watchlist.py`.
@@ -25,8 +25,6 @@ I used Claude Code throughout this review cycle:
 **How I verified:** `pytest tests/test_watchlist.py -v` — all 3 pass. Full suite (`pytest tests/ -v`) is at 7/7 passing.
 
 ## Comment 4 — Default visibility
-*(Draft — Allan, please review and make this your own reasoning before submitting; see note below.)*
-
 **My position:** Keep `public=True` as the default.
 
 **Reasoning:** CineLog bills itself as a "community film tracking app" (README) — collections and watchlists are the two pieces of user activity the app has, and neither currently has any concept of a private-by-default social graph. `CollectionEntry` doesn't have a visibility field at all — once you log a film as watched, it's simply public, full stop. Making watchlist default to private would introduce an inconsistency where one type of user activity (already-watched) is always public but a different type (intend-to-watch) defaults to hidden, with no precedent elsewhere in the app for that split. Defaulting to public also lowers friction for the common case: most users adding a film to a to-watch queue aren't making a considered privacy choice, they're clicking "add" — an opt-out default means the one field that captures a genuine privacy decision (the `public` boolean already on the model) still exists for the user who cares enough to flip it, without penalizing everyone else with an extra decision on every add.
@@ -100,5 +98,5 @@ curl http://127.0.0.1:5000/watchlist/<user_id>                     # -> [{"title
 Or run the automated suite: `pytest tests/ -v` (7 tests, covering `add_to_watchlist`'s happy path, dedup, and nonexistent-film cases).
 
 ### Commit history
-<!-- Screenshot of `git log --oneline` on feature/watchlist goes here -->
 
+![alt text](image.png)
